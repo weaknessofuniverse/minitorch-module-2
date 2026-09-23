@@ -22,7 +22,11 @@ def central_difference(f: Any, *vals: Any, arg: int = 0, epsilon: float = 1e-6) 
     Returns:
         An approximation of $f'_i(x_0, \ldots, x_{n-1})$
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    vals_plus = list(vals)
+    vals_minus = list(vals)
+    vals_plus[arg] = vals_plus[arg] + epsilon
+    vals_minus[arg] = vals_minus[arg] - epsilon
+    return (f(*vals_plus) - f(*vals_minus)) / (2.0 * epsilon)
 
 
 variable_count = 1
@@ -60,7 +64,20 @@ def topological_sort(variable: Variable) -> Iterable[Variable]:
     Returns:
         Non-constant Variables in topological order starting from the right.
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    order: List[Variable] = []
+    visited = set()
+
+    def visit(var: Variable) -> None:
+        if var.unique_id in visited or var.is_constant():
+            return
+        if not var.is_leaf():
+            for p in var.parents:
+                visit(p)
+        visited.add(var.unique_id)
+        order.append(var)
+
+    visit(variable)
+    return list(reversed(order))
 
 
 def backpropagate(variable: Variable, deriv: Any) -> None:
@@ -74,7 +91,21 @@ def backpropagate(variable: Variable, deriv: Any) -> None:
 
     No return. Should write to its results to the derivative values of each leaf through `accumulate_derivative`.
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    derivatives = {variable.unique_id: deriv}
+    for var in topological_sort(variable):
+        d = derivatives.pop(var.unique_id, None)
+        if d is None:
+            continue
+        if var.is_leaf():
+            var.accumulate_derivative(d)
+            continue
+        for parent, pd in var.chain_rule(d):
+            if parent.is_constant():
+                continue
+            if parent.unique_id in derivatives:
+                derivatives[parent.unique_id] = derivatives[parent.unique_id] + pd
+            else:
+                derivatives[parent.unique_id] = pd
 
 
 @dataclass
